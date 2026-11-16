@@ -16,7 +16,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from gpu_terminal.fetch import SKUS, FetchError, fetch_series, make_reader
+from gpu_terminal.fetch import LIVE_SKUS, SKUS, FetchError, fetch_series, make_reader
 from gpu_terminal.history import append, latest_observed_at
 from gpu_terminal.poller import choose_window, with_retries
 
@@ -36,7 +36,7 @@ def poll_sku(reader, history: Path, sku: str, now: datetime) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--skus", nargs="+", choices=SKUS, default=["H100"])
+    parser.add_argument("--skus", nargs="+", choices=SKUS, default=list(LIVE_SKUS))
     parser.add_argument("--history", type=Path, default=Path("history"))
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")

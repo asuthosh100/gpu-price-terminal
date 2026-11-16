@@ -20,7 +20,7 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from gpu_terminal.fetch import SKUS
+from gpu_terminal.fetch import LIVE_SKUS, SKUS
 from gpu_terminal.history import read_history
 from gpu_terminal.prints import Print
 from gpu_terminal.site_data import SiteDataError, sku_detail, summary
@@ -53,7 +53,7 @@ def _load(args: argparse.Namespace) -> list[tuple[str, list[Print]]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--skus", nargs="+", choices=SKUS, default=["H100"])
+    parser.add_argument("--skus", nargs="+", choices=SKUS, default=list(LIVE_SKUS))
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--history", type=Path, default=Path("history"))
     source.add_argument("--db", type=Path, help="read a SQLite store instead of the CSV history")

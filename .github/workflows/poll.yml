@@ -20,8 +20,8 @@ concurrency:
   group: poll-and-deploy
   cancel-in-progress: false
 
+# Which GPUs are live is set by LIVE_SKUS in src/gpu_terminal/fetch.py.
 env:
-  SKUS: H100
   HISTORY_DIR: .data-branch/history
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
         id: poll
         # Keep going on failure: commit what we got and redeploy, then fail the run at the end.
         continue-on-error: true
-        run: python scripts/poll.py --skus $SKUS --history "$HISTORY_DIR"
+        run: python scripts/poll.py --history "$HISTORY_DIR"
 
       - name: Commit new prints
         working-directory: .data-branch
@@ -88,7 +88,7 @@ jobs:
           fi
 
       - name: Export site data
-        run: python scripts/export_site_data.py --skus $SKUS --history "$HISTORY_DIR" --out web/public/data
+        run: python scripts/export_site_data.py --history "$HISTORY_DIR" --out web/public/data
 
       - uses: actions/setup-node@v4
         with:

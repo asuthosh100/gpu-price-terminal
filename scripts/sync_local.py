@@ -13,7 +13,7 @@ import logging
 import sys
 from pathlib import Path
 
-from gpu_terminal.fetch import SKUS
+from gpu_terminal.fetch import LIVE_SKUS, SKUS
 from gpu_terminal.history import HistoryFormatError, read_history
 from gpu_terminal.store import PrintStore
 
@@ -22,7 +22,7 @@ log = logging.getLogger("sync_local")
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--skus", nargs="+", choices=SKUS, default=["H100"])
+    parser.add_argument("--skus", nargs="+", choices=SKUS, default=list(LIVE_SKUS))
     parser.add_argument("--history", type=Path, default=Path("history"))
     parser.add_argument("--db", type=Path, default=Path("data/prints.sqlite"))
     args = parser.parse_args()
