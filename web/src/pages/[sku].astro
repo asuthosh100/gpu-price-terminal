@@ -1,0 +1,271 @@
+---
+import Base from "../layouts/Base.astro";
+import Freshness from "../components/Freshness.astro";
+import { loadDetail, loadSummary } from "../lib/data";
+import { TZ_LABEL, changeText, direction, pct, shortTime, usd } from "../lib/format";
+import { DAY, DEFAULT_RANGE, availableRanges, changeOver, findRange, rangePoints, stats } from "../lib/metrics";
+
+export function getStaticPaths() {
+  return loadSummary().skus.map((s) => ({ params: { sku: s.sku.toLowerCase() }, props: { sku: s.sku } }));
+}
+
+interface Props {
+  readonly sku: string;
+}
+const { sku } = Astro.props;
+const detail = loadDetail(sku);
+const ranges = availableRanges(detail.points);
+const range = findRange(ranges, DEFAULT_RANGE);
+const shown = rangePoints(detail.points, range.seconds);
+const headChange = changeOver(shown, null);
+const perf = [
+  { label: "24 hours", c: changeOver(detail.points, DAY) },
+  { label: "7 days", c: changeOver(detail.points, 7 * DAY) },
+  { label: "30 days", c: changeOver(detail.points, 30 * DAY) },
+  { label: "All time", c: changeOver(detail.points, null) },
+];
+const s = stats(detail.points);
+const statRows = [
+  { label: "High", v: usd(s.high) },
+  { label: "Low", v: usd(s.low) },
+  { label: "Mean", v: usd(s.mean) },
+  { label: "Stability band", v: usd(detail.last.band) },
+];
+---
+
+<Base title={`${detail.name} · GPU Index`} description={`${detail.name} rental price per GPU-hour, live.`}>
+  <Freshness slot="status" time={detail.last.time} />
+
+  <div id="page" data-sku={sku} data-range={range.key}>
+    <a class="back muted" href={import.meta.env.BASE_URL}>← All GPUs</a>
+    <div class="sym"><b>{detail.name}</b> · {detail.unit} · CGI composite</div>
+    <div id="price" class="price num">{usd(detail.last.value)}</div>
+    <div id="change" class="change num">
+      <span class:list={[direction(headChange)]}>{changeText(headChange)}</span>
+      <span class="when">{range.label}</span>
+    </div>
+
+    <div class="chart" id="chart">
+      <canvas id="cv" role="img" aria-label={`${detail.name} price chart`}></canvas>
+      <div id="pulse" hidden></div>
+      <div id="stamp" hidden></div>
+    </div>
+    <div class="ranges" id="ranges" role="tablist" aria-label="Chart range">
+      {
+        ranges.map((r) => (
+          <button role="tab" data-k={r.key} aria-selected={r.key === range.key ? "true" : "false"}>
+            {r.key}
+          </button>
+        ))
+      }
+    </div>
+
+    <h2>Performance</h2>
+    <div class="stats" id="perf">
+      {
+        perf.map((p) => (
+          <div class="stat">
+            <div class="k">{p.label}</div>
+            <div class:list={["v", "num", direction(p.c)]}>{pct(p.c?.pct)}</div>
+          </div>
+        ))
+      }
+    </div>
+    <h2>Stats</h2>
+    <div class="stats" id="stats">
+      {
+        statRows.map((r) => (
+          <div class="stat">
+            <div class="k">{r.label}</div>
+            <div class="v num">{r.v}</div>
+          </div>
+        ))
+      }
+    </div>
+    <p class="asof muted">Last print {shortTime(detail.last.time)} {TZ_LABEL}</p>
+  </div>
+</Base>
+
+<style>
+  #page { padding-top: 20px; }
+  .back { display: inline-block; font-size: 13px; text-decoration: none; margin-bottom: 16px; }
+  .back:hover { color: var(--text); }
+  .sym { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
+  .sym b { color: var(--text); font-weight: 600; }
+  .price { font-size: 40px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; }
+  .change { margin-top: 6px; font-size: 15px; font-weight: 500; min-height: 22px; }
+  .change :global(.when) { color: var(--muted); font-weight: 400; margin-left: 6px; }
+
+  .chart {
+    position: relative;
+    height: 340px;
+    margin: 20px 0 8px;
+    touch-action: pan-y;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #stamp {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  #pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border-radius: 50%;
+    background: var(--c);
+    pointer-events: none;
+  }
+  #pulse::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: var(--c);
+    animation: ping 1.8s ease-out infinite;
+  }
+  #pulse[hidden], #stamp[hidden] { display: none; }
+  @keyframes ping {
+    from { transform: scale(1); opacity: 0.6; }
+    to { transform: scale(3.2); opacity: 0; }
+  }
+
+  .ranges { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .ranges button {
+    background: none;
+    border: 0;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    position: relative;
+  }
+  .ranges button:hover, .ranges button[aria-selected="true"] { color: var(--c); }
+  .ranges button[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -11px;
+    height: 2px;
+    background: var(--c);
+  }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 24px; }
+  .stat { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .k { font-size: 13px; color: var(--muted); }
+  .v { font-size: 15px; margin-top: 2px; }
+  .asof { font-size: 12px; margin: 16px 0 24px; }
+
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .price { font-size: 32px; }
+    .chart { height: 260px; }
+  }
+</style>
+
+<script>
+  import { PriceChart } from "../lib/chart";
+  import type { ScrubState } from "../lib/chart";
+  import { bindFreshness } from "../lib/freshness";
+  import { TZ_LABEL, changeText, direction, pct, stampFor, usd } from "../lib/format";
+  import { poll, withBase } from "../lib/live";
+  import { DAY, availableRanges, changeOver, findRange, stats } from "../lib/metrics";
+  import type { Range } from "../lib/metrics";
+  import { parseDetail } from "../lib/types";
+  import type { SkuDetail } from "../lib/types";
+
+  const page = document.getElementById("page")!;
+  const sku = page.dataset["sku"]!;
+  const $ = (id: string): HTMLElement => document.getElementById(id)!;
+  const badge = bindFreshness($("fresh"));
+  const rangesEl = $("ranges");
+
+  let ranges: readonly Range[] = [];
+  let range: Range | null = null;
+
+  const stampText = (t: number, r: Range): string => stampFor(t, r.seconds ?? Infinity);
+
+  function showState(s: ScrubState): void {
+    if (!range) return;
+    $("price").textContent = usd(s.value);
+    const when = s.hovering ? `${stampText(s.time, range)} ${TZ_LABEL}` : range.label;
+    const sw = s.switchedTo ? ` · methodology → ${s.switchedTo.methodology_id.split("_").pop()}` : "";
+    const change = $("change");
+    change.replaceChildren();
+    const delta = document.createElement("span");
+    delta.className = direction(s.change);
+    delta.textContent = changeText(s.change);
+    const label = document.createElement("span");
+    label.className = "when";
+    label.textContent = when + sw;
+    change.append(delta, label);
+  }
+
+  function selectRange(key: string): void {
+    range = findRange(ranges, key);
+    rangesEl.querySelectorAll("button").forEach((b) => {
+      b.setAttribute("aria-selected", String(b.dataset["k"] === range!.key));
+    });
+  }
+
+  function paintStats(d: SkuDetail): void {
+    const perf = [DAY, 7 * DAY, 30 * DAY, null].map((w) => changeOver(d.points, w));
+    $("perf").querySelectorAll(".v").forEach((el, i) => {
+      el.textContent = pct(perf[i]?.pct);
+      el.classList.remove("up", "down");
+      const dir = direction(perf[i]);
+      if (dir) el.classList.add(dir);
+    });
+    const st = stats(d.points);
+    const vals = [usd(st.high), usd(st.low), usd(st.mean), usd(d.last.band)];
+    $("stats").querySelectorAll(".v").forEach((el, i) => (el.textContent = vals[i] ?? "–"));
+  }
+
+  let chart: PriceChart | null = null;
+
+  function update(d: SkuDetail): void {
+    ranges = availableRanges(d.points);
+    if (!range) selectRange(page.dataset["range"]!);
+    if (!chart) {
+      chart = new PriceChart(
+        { box: $("chart"), canvas: $("cv") as HTMLCanvasElement, pulse: $("pulse"), stamp: $("stamp") },
+        range!,
+        stampText,
+        showState,
+      );
+    }
+    chart.setData(d.points, d.versions);
+    paintStats(d);
+    badge.setTime(d.last.time);
+  }
+
+  rangesEl.addEventListener("click", (e) => {
+    const key = (e.target as HTMLElement).closest("button")?.dataset["k"];
+    if (!key || !chart || key === range?.key) return;
+    selectRange(key);
+    chart.setRange(range!);
+  });
+
+  poll({
+    url: withBase(`data/${sku.toLowerCase()}.json`),
+    parse: (doc) => parseDetail(doc, sku),
+    onData: update,
+    onError: badge.setError,
+  });
+</script>

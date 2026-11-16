@@ -1,0 +1,14 @@
+---
+// "Updated 6 min ago" for the latest print. The page script keeps it current.
+import { freshness, timeAgo } from "../lib/format";
+
+interface Props {
+  readonly time: number;
+}
+const { time } = Astro.props;
+const now = Math.floor(Date.now() / 1000);
+---
+
+<span class="fresh" id="fresh" data-time={time} data-state={freshness(time, now)} aria-live="polite">
+  Updated {timeAgo(time, now)}
+</span>

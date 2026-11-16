@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU Price Terminal</title>
+<style>
+  :root {
+    --bg: #ffffff; --text: #000000; --muted: #6f7177; --line: #e3e5e8; --faint: #c9ccd1;
+    --up: #00a805; --down: #ff5000;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000; --text: #ffffff; --muted: #8e9096; --line: #1f2124; --faint: #3a3d42;
+      --up: #00c805; --down: #ff5000;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --text: #ffffff; --muted: #8e9096; --line: #1f2124; --faint: #3a3d42;
+    --up: #00c805; --down: #ff5000;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+         -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 32px 16px 48px; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* header */
+  .sym { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
+  .sym b { color: var(--text); font-weight: 600; }
+  #price { font-size: 40px; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; }
+  #change { margin-top: 6px; font-size: 15px; font-weight: 500; min-height: 22px; }
+  #change .when { color: var(--muted); font-weight: 400; margin-left: 6px; }
+
+  /* chart */
+  .chart { position: relative; height: 340px; margin: 20px 0 8px; touch-action: pan-y;
+           cursor: crosshair; user-select: none; -webkit-user-select: none; }
+  .chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #stamp { position: absolute; top: -2px; transform: translateX(-50%); font-size: 12px;
+           color: var(--muted); white-space: nowrap; pointer-events: none; display: none;
+           text-transform: uppercase; letter-spacing: .03em; }
+  #pulse { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px;
+           border-radius: 50%; background: var(--c); pointer-events: none; }
+  #pulse::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--c);
+                  animation: ping 1.8s ease-out infinite; }
+  @keyframes ping { from { transform: scale(1); opacity: .6; } to { transform: scale(3.2); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #pulse::after { animation: none; } }
+
+  /* ranges */
+  .ranges { display: flex; gap: 4px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+  .ranges button { background: none; border: 0; padding: 6px 10px; border-radius: 6px; font: inherit;
+                   font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer;
+                   position: relative; }
+  .ranges button:hover { color: var(--c); }
+  .ranges button.on { color: var(--c); }
+  .ranges button.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -11px;
+                             height: 2px; background: var(--c); }
+
+  /* stats */
+  h2 { font-size: 22px; font-weight: 500; margin: 36px 0 4px; padding-bottom: 12px;
+       border-bottom: 1px solid var(--line); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 24px; }
+  .stat { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .stat .k { font-size: 13px; color: var(--muted); }
+  .stat .v { font-size: 15px; margin-top: 2px; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  @media (max-width: 640px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    #price { font-size: 32px; }
+    .chart { height: 260px; }
+  }
+  footer { margin-top: 32px; color: var(--muted); font-size: 12px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="sym" id="sym"></div>
+  <div id="price" class="num"></div>
+  <div id="change" class="num"></div>
+
+  <div class="chart" id="chart">
+    <canvas id="cv"></canvas>
+    <div id="pulse"></div>
+    <div id="stamp"></div>
+  </div>
+  <div class="ranges" id="ranges"></div>
+
+  <h2>Performance</h2>
+  <div class="stats" id="perf"></div>
+  <h2>Stats</h2>
+  <div class="stats" id="stats"></div>
+
+  <footer>
+    Data: <a href="https://github.com/getcomputable/gpu-index">Computable GPU Index</a>, CC BY-NC 4.0
+  </footer>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+const DAY = 86400;
+const MAX_POINTS = 480;          // plotted points per range; longer ranges are downsampled
+const PAD_TOP = 28, PAD_BOTTOM = 16;
+const DRAW_MS = 450;
+
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const usd = v => v == null ? "–" : "$" + v.toFixed(3);
+const signed = v => (v >= 0 ? "+" : "−") + "$" + Math.abs(v).toFixed(3);
+const pct = v => v == null ? "–" : (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2) + "%";
+const cls = v => v == null ? "" : v >= 0 ? "up" : "down";
+const fmt = (t, opts) => new Date(t * 1000).toLocaleString("en-US", { timeZone: "UTC", ...opts });
+const fmtStamp = (t, span) => span <= 7 * DAY
+  ? fmt(t, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+  : fmt(t, { month: "short", day: "numeric", year: "numeric" });
+
+const priced = DATA.points;                       // [[time, value], ...] priced 15m prints
+const last = priced[priced.length - 1];
+const valueAt = t => {                            // last priced value at or before t
+  let lo = 0, hi = priced.length - 1, ans = null;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (priced[m][0] <= t) { ans = priced[m][1]; lo = m + 1; } else hi = m - 1; }
+  return ans;
+};
+const changeOver = secs => {
+  const then = valueAt(last[0] - secs);
+  return then == null ? null : (last[1] / then - 1) * 100;
+};
+
+// ---- ranges: each is a downsampled slice of the priced prints
+const RANGES = [
+  { key: "1D", secs: DAY, label: "Past day" },
+  { key: "1W", secs: 7 * DAY, label: "Past week" },
+  { key: "1M", secs: 30 * DAY, label: "Past month" },
+  { key: "ALL", secs: null, label: "All time" },
+].filter(r => r.secs == null || last[0] - priced[0][0] > r.secs / 2);
+
+function slice(range) {
+  const from = range.secs == null ? priced[0][0] : last[0] - range.secs;
+  const pts = priced.filter(p => p[0] >= from);
+  const step = Math.ceil(pts.length / MAX_POINTS);
+  if (step <= 1) return pts;
+  // keep the last print of each block so the final point is always the latest print
+  const out = [];
+  for (let i = step - 1; i < pts.length; i += step) out.push(pts[i]);
+  if (out[out.length - 1] !== last) out.push(last);
+  return [pts[0], ...out];
+}
+
+// ---- chart
+const box = $("chart"), cv = $("cv"), ctx = cv.getContext("2d");
+const pulse = $("pulse"), stamp = $("stamp");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let range = RANGES.find(r => r.key === "1M") || RANGES[RANGES.length - 1];
+let pts = [], hover = null, progress = 1, geom = null;
+
+function layout() {
+  const w = box.clientWidth, h = box.clientHeight, dpr = devicePixelRatio || 1;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const vals = pts.map(p => p[1]);
+  const baseline = range.key === "1D" ? pts[0][1] : null;
+  let lo = Math.min(...vals, baseline ?? Infinity), hi = Math.max(...vals, baseline ?? -Infinity);
+  if (hi === lo) { hi += 0.01; lo -= 0.01; }
+  const x = i => pts.length === 1 ? w / 2 : (i / (pts.length - 1)) * (w - 6) + 1;
+  const y = v => PAD_TOP + (1 - (v - lo) / (hi - lo)) * (h - PAD_TOP - PAD_BOTTOM);
+  geom = { w, h, x, y, baseline };
+}
+
+function color() {
+  return pts[pts.length - 1][1] >= pts[0][1] ? css("--up") : css("--down");
+}
+
+function stroke(from, to, style) {
+  if (to <= from) return;
+  ctx.beginPath();
+  for (let i = from; i <= to; i++) {
+    const X = geom.x(i), Y = geom.y(pts[i][1]);
+    i === from ? ctx.moveTo(X, Y) : ctx.lineTo(X, Y);
+  }
+  ctx.strokeStyle = style; ctx.stroke();
+}
+
+function draw() {
+  const { w, h, x, y, baseline } = geom;
+  const c = color();
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+
+  if (baseline != null) {                        // dotted "previous close" reference on 1D
+    ctx.save(); ctx.setLineDash([1, 5]); ctx.lineWidth = 1.5; ctx.strokeStyle = css("--faint");
+    ctx.beginPath(); ctx.moveTo(0, y(baseline)); ctx.lineTo(w, y(baseline)); ctx.stroke(); ctx.restore();
+  }
+
+  const end = Math.round(progress * (pts.length - 1));
+  if (hover == null) stroke(0, end, c);
+  else { stroke(0, hover, c); stroke(hover, end, css("--faint")); }
+
+  // methodology switches: small hollow rings on the line
+  for (const v of DATA.versions.slice(1)) {
+    const i = pts.findIndex(p => p[0] >= v.time);
+    if (i <= 0 || i > end) continue;
+    ctx.beginPath(); ctx.arc(x(i), y(pts[i][1]), 3.5, 0, 2 * Math.PI);
+    ctx.fillStyle = css("--bg"); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = css("--muted"); ctx.stroke();
+  }
+
+  if (hover != null) {
+    const X = x(hover), Y = y(pts[hover][1]);
+    ctx.lineWidth = 1; ctx.strokeStyle = css("--faint");
+    ctx.beginPath(); ctx.moveTo(X, 18); ctx.lineTo(X, h); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X, Y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = c; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = css("--bg"); ctx.stroke();
+  }
+
+  document.documentElement.style.setProperty("--c", c);
+  const showPulse = hover == null && progress === 1;
+  pulse.style.display = showPulse ? "block" : "none";
+  if (showPulse) { pulse.style.left = x(pts.length - 1) + "px"; pulse.style.top = y(last[1]) + "px"; }
+}
+
+function header() {
+  const i = hover ?? pts.length - 1;
+  const [t, v] = pts[i], base = pts[0][1];
+  const d = v - base, p = (v / base - 1) * 100;
+  $("price").textContent = usd(v);
+  // name a methodology switch when the scrubbed point is the first one after it
+  const sw = hover != null && i > 0 &&
+    DATA.versions.slice(1).find(x => x.time > pts[i - 1][0] && x.time <= t);
+  const when = (hover == null ? range.label : fmtStamp(t, range.secs ?? Infinity) + " UTC") +
+    (sw ? ` · methodology → ${sw.methodology_id.split("_").pop()}` : "");
+  $("change").innerHTML = `<span class="${cls(d)}">${signed(d)} (${pct(p)})</span>` +
+    `<span class="when">${when}</span>`;
+
+  stamp.style.display = hover == null ? "none" : "block";
+  if (hover != null) {
+    stamp.textContent = fmtStamp(t, range.secs ?? Infinity);
+    const half = stamp.offsetWidth / 2;
+    stamp.style.left = Math.min(Math.max(geom.x(i), half), geom.w - half) + "px";
+  }
+}
+
+function render() { draw(); header(); }
+
+function animateIn() {
+  if (reduceMotion) { progress = 1; render(); return; }
+  const t0 = performance.now();
+  const tick = now => {
+    const k = Math.min(1, (now - t0) / DRAW_MS);
+    progress = 1 - Math.pow(1 - k, 3);
+    if (k === 1) progress = 1;
+    draw();
+    if (k < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function setRange(r) {
+  range = r; pts = slice(r); hover = null;
+  layout(); header(); animateIn(); syncButtons();
+}
+
+// ---- scrubbing (mouse + touch)
+function scrub(clientX) {
+  const rect = box.getBoundingClientRect();
+  const k = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  const i = Math.round(k * (pts.length - 1));
+  if (i !== hover) { hover = i; progress = 1; render(); }
+}
+const release = () => { if (hover != null) { hover = null; render(); } };
+box.addEventListener("pointermove", e => scrub(e.clientX));
+box.addEventListener("pointerdown", e => scrub(e.clientX));
+box.addEventListener("pointerleave", release);
+box.addEventListener("pointerup", e => { if (e.pointerType !== "mouse") release(); });
+box.addEventListener("pointercancel", release);
+
+// ---- range buttons
+const rangesEl = $("ranges");
+rangesEl.innerHTML = RANGES.map(r => `<button data-k="${r.key}">${r.key}</button>`).join("");
+const syncButtons = () => rangesEl.querySelectorAll("button")
+  .forEach(b => b.classList.toggle("on", b.dataset.k === range.key));
+rangesEl.addEventListener("click", e => {
+  const r = RANGES.find(x => x.key === e.target.dataset.k);
+  if (r && r !== range) setRange(r);
+});
+
+new ResizeObserver(() => { if (pts.length) { layout(); render(); } }).observe(box);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+
+// ---- static sections
+$("sym").innerHTML = `<b>${DATA.sku}</b> · USD / GPU-hour · CGI composite`;
+const stats = (id, items) => $(id).innerHTML = items.map(([k, v, c]) =>
+  `<div class="stat"><div class="k">${k}</div><div class="v num ${c || ""}">${v}</div></div>`).join("");
+const first = priced[0];
+const allChg = (last[1] / first[1] - 1) * 100;
+const vals = priced.map(p => p[1]);
+const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+stats("perf", [
+  ["24 hours", pct(changeOver(DAY)), cls(changeOver(DAY))],
+  ["7 days", pct(changeOver(7 * DAY)), cls(changeOver(7 * DAY))],
+  ["30 days", pct(changeOver(30 * DAY)), cls(changeOver(30 * DAY))],
+  ["All time", pct(allChg), cls(allChg)],
+]);
+stats("stats", [
+  ["High", usd(Math.max(...vals))], ["Low", usd(Math.min(...vals))],
+  ["Mean", usd(mean)], ["Stability band", usd(DATA.last_band)],
+]);
+
+setRange(range);
+</script>
+</body>
+</html>

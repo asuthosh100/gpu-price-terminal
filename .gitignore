@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+# Fetched index data (CC BY-NC 4.0, Computable) is never committed to main; the CSV
+# history is committed only to the `data` branch, with attribution.
+data/
+chart/*.html
+
+# CSV history lives on the `data` branch, never on main (see .github/workflows/poll.yml).
+history/
+.data-branch/

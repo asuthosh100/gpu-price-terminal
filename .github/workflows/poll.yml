@@ -1,0 +1,132 @@
+# Every 15 minutes: fetch new prints, append them to the CSV history on the `data`
+# branch, rebuild the site from that history, and deploy it to GitHub Pages.
+#
+# Self-healing by design: each run fetches whatever window covers the gap since the
+# newest stored print, so late, skipped or failed runs are caught up by the next one.
+name: Poll and deploy
+
+on:
+  schedule:
+    # A few minutes after each 15-minute print, and off the top of the hour,
+    # when GitHub's scheduler is busiest.
+    - cron: "4,19,34,49 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["src/**", "scripts/**", "web/**", "pyproject.toml", ".github/workflows/poll.yml"]
+
+# One run at a time: a queued run waits instead of racing to push the data branch.
+concurrency:
+  group: poll-and-deploy
+  cancel-in-progress: false
+
+env:
+  SKUS: H100
+  HISTORY_DIR: .data-branch/history
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # push the data branch
+    outputs:
+      poll_outcome: ${{ steps.poll.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out history (data branch)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data > /dev/null; then
+            git fetch --depth=1 origin +refs/heads/data:refs/remotes/origin/data
+            git worktree add -B data .data-branch origin/data
+          else
+            echo "No data branch yet; starting one (first run fetches the full 90 days)."
+            git worktree add --detach .data-branch
+            git -C .data-branch checkout -q --orphan data
+            git -C .data-branch rm -rfq --ignore-unmatch .
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install
+        run: pip install .
+
+      - name: Poll
+        id: poll
+        # Keep going on failure: commit what we got and redeploy, then fail the run at the end.
+        continue-on-error: true
+        run: python scripts/poll.py --skus $SKUS --history "$HISTORY_DIR"
+
+      - name: Commit new prints
+        working-directory: .data-branch
+        run: |
+          if [ ! -f README.md ]; then
+            cat > README.md <<'EOF'
+          # GPU price history
+
+          Every published Computable GPU Index print, one CSV per GPU per month
+          (`history/<SKU>/YYYY-MM.csv`), appended by `.github/workflows/poll.yml` on `main`.
+
+          Index values: Computable GPU Index (CGI), (c) 2026 Computable,
+          https://github.com/getcomputable/gpu-index, licensed CC BY-NC 4.0.
+          Stored as published, not recomputed. Times are UTC.
+          EOF
+          fi
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No new prints."
+          else
+            git commit -q -m "chore(data): prints through $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push -q origin data
+          fi
+
+      - name: Export site data
+        run: python scripts/export_site_data.py --skus $SKUS --history "$HISTORY_DIR" --out web/public/data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build site
+        working-directory: web
+        env:
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}
+          ASTRO_TELEMETRY_DISABLED: "1"
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Fail the run if polling failed
+        if: needs.update.outputs.poll_outcome == 'failure'
+        run: |
+          echo "::error::Polling failed; the site was redeployed with the history we have. The next run will catch up."
+          exit 1

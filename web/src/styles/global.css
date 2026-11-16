@@ -1,0 +1,84 @@
+:root {
+  --bg: #ffffff;
+  --text: #000000;
+  --muted: #6f7177;
+  --line: #e3e5e8;
+  --faint: #c9ccd1;
+  --hover: #f5f6f7;
+  --up: #00a805;
+  --down: #ff5000;
+  --late: #c98a00;
+  --on-pill: #ffffff;
+  --c: var(--up);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --text: #ffffff;
+    --muted: #8e9096;
+    --line: #1f2124;
+    --faint: #3a3d42;
+    --hover: #0f1011;
+    --up: #00c805;
+    --down: #ff5000;
+    --late: #f0b400;
+    --on-pill: #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --text: #ffffff;
+  --muted: #8e9096;
+  --line: #1f2124;
+  --faint: #3a3d42;
+  --hover: #0f1011;
+  --up: #00c805;
+  --down: #ff5000;
+  --late: #f0b400;
+  --on-pill: #000000;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 16px 48px; }
+.num { font-variant-numeric: tabular-nums; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.muted { color: var(--muted); }
+
+:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; border-radius: 4px; }
+
+h2 {
+  font-size: 22px;
+  font-weight: 500;
+  margin: 36px 0 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* "Updated 6 min ago" with a status dot */
+.fresh { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.fresh::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--up);
+}
+.fresh[data-state="late"]::before { background: var(--late); }
+.fresh[data-state="stale"]::before { background: var(--down); }
+.fresh[data-state="error"]::before { background: var(--down); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

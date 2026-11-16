@@ -1,0 +1,137 @@
+---
+import Base from "../layouts/Base.astro";
+import Freshness from "../components/Freshness.astro";
+import { loadSummary } from "../lib/data";
+import { direction, pct, usd } from "../lib/format";
+import { sparkPath } from "../lib/sparkline";
+
+const SPARK_W = 112;
+const SPARK_H = 36;
+
+const summary = loadSummary();
+const latest = Math.max(...summary.skus.map((s) => s.last.time));
+const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${sku.toLowerCase()}`;
+---
+
+<Base title="GPU Index" description="Live GPU rental prices from the Computable GPU Index.">
+  <Freshness slot="status" time={latest} />
+
+  <section class="intro">
+    <h1>GPU prices</h1>
+    <p class="muted">What it costs to rent one GPU for an hour, published every 15 minutes.</p>
+  </section>
+
+  <ul class="list" id="list" data-spark-w={SPARK_W} data-spark-h={SPARK_H}>
+    {
+      summary.skus.map((s) => (
+        <li data-sku={s.sku}>
+          <a class="row" href={href(s.sku)}>
+            <span class="id">
+              <span class="name">{s.name}</span>
+              <span class="unit muted">{s.unit}</span>
+            </span>
+            <svg
+              class:list={["spark", direction(s.change_24h)]}
+              viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+              width={SPARK_W}
+              height={SPARK_H}
+              aria-hidden="true"
+            >
+              <path d={sparkPath(s.spark, SPARK_W, SPARK_H)} />
+            </svg>
+            <span class="quote">
+              <span class="price num">{usd(s.last.value)}</span>
+              <span class:list={["pill", "num", direction(s.change_24h)]} title="Change over the past 24 hours">
+                {pct(s.change_24h?.pct)}
+              </span>
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  .intro { padding: 32px 0 8px; }
+  h1 { font-size: 32px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .intro p { margin: 0; }
+
+  .list { list-style: none; margin: 16px 0 0; padding: 0; border-top: 1px solid var(--line); }
+  .list li { border-bottom: 1px solid var(--line); }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 8px;
+    margin: 0 -8px;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 120ms ease-out;
+  }
+  .row:hover { background: var(--hover); }
+  .id { display: flex; flex-direction: column; min-width: 0; }
+  .name { font-weight: 600; font-size: 16px; }
+  .unit { font-size: 13px; }
+
+  .spark { display: block; overflow: visible; }
+  .spark path { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  .spark.up path { stroke: var(--up); }
+  .spark.down path { stroke: var(--down); }
+
+  .quote { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 88px; }
+  .price { font-size: 16px; font-weight: 500; }
+  .pill {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    color: var(--on-pill);
+    background: var(--muted);
+  }
+  .pill.up { background: var(--up); }
+  .pill.down { background: var(--down); }
+
+  @media (max-width: 520px) {
+    .row { gap: 12px; }
+    .spark { width: 72px; }
+  }
+</style>
+
+<script>
+  import { bindFreshness } from "../lib/freshness";
+  import { direction, pct, usd } from "../lib/format";
+  import { poll, withBase } from "../lib/live";
+  import { sparkPath } from "../lib/sparkline";
+  import { parseSummary } from "../lib/types";
+  import type { Summary } from "../lib/types";
+
+  const list = document.getElementById("list")!;
+  const w = Number(list.dataset["sparkW"]);
+  const h = Number(list.dataset["sparkH"]);
+  const badge = bindFreshness(document.getElementById("fresh")!);
+
+  const setDirection = (el: Element | null, dir: string): void => {
+    el?.classList.remove("up", "down");
+    if (dir) el?.classList.add(dir);
+  };
+
+  function update(summary: Summary): void {
+    for (const s of summary.skus) {
+      const row = list.querySelector(`li[data-sku="${CSS.escape(s.sku)}"]`);
+      if (!row) continue; // a SKU added since this page was built appears on the next deploy
+      const dir = direction(s.change_24h);
+      row.querySelector(".price")!.textContent = usd(s.last.value);
+      const pill = row.querySelector(".pill")!;
+      pill.textContent = pct(s.change_24h?.pct);
+      setDirection(pill, dir);
+      const spark = row.querySelector(".spark");
+      setDirection(spark, dir);
+      spark?.querySelector("path")?.setAttribute("d", sparkPath(s.spark, w, h));
+    }
+    badge.setTime(Math.max(...summary.skus.map((s) => s.last.time)));
+  }
+
+  poll({ url: withBase("data/summary.json"), parse: parseSummary, onData: update, onError: badge.setError });
+</script>
