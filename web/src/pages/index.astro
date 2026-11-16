@@ -1,14 +1,20 @@
 ---
 import Base from "../layouts/Base.astro";
-import { loadSummary } from "../lib/data";
+import { loadSummary, skuImage } from "../lib/data";
 import { direction, pct, usd } from "../lib/format";
 import { sparkPath } from "../lib/sparkline";
 
-const SPARK_W = 112;
-const SPARK_H = 36;
+// The sparkline's drawing box; CSS stretches it to the card width (non-scaling stroke).
+const SPARK_W = 320;
+const SPARK_H = 48;
+// public/images/*.jpg are exported at 880x462 (the 1200x630 source, scaled).
+const IMG_W = 880;
+const IMG_H = 462;
 
 const summary = loadSummary();
-const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${sku.toLowerCase()}`;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const href = (sku: string) => `${base}/${sku.toLowerCase()}`;
+const asset = (path: string) => `${base}/${path}`;
 ---
 
 <Base title="GPU Index" description="Live GPU rental prices from the Computable GPU Index.">
@@ -17,33 +23,51 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
     <p class="muted">What it costs to rent one GPU for an hour, published every 15 minutes.</p>
   </section>
 
-  <ul class="list" id="list" data-spark-w={SPARK_W} data-spark-h={SPARK_H}>
+  <ul class="grid" id="list" data-spark-w={SPARK_W} data-spark-h={SPARK_H}>
     {
-      summary.skus.map((s) => (
-        <li data-sku={s.sku}>
-          <a class="row" href={href(s.sku)}>
-            <span class="id">
-              <span class="name">{s.name}</span>
-              <span class="unit muted">{s.unit}</span>
-            </span>
-            <svg
-              class:list={["spark", direction(s.change_24h)]}
-              viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
-              width={SPARK_W}
-              height={SPARK_H}
-              aria-hidden="true"
-            >
-              <path d={sparkPath(s.spark, SPARK_W, SPARK_H)} />
-            </svg>
-            <span class="quote">
-              <span class="price num">{usd(s.last.value)}</span>
-              <span class:list={["pill", "num", direction(s.change_24h)]} title="Change over the past 24 hours">
-                {pct(s.change_24h?.pct)}
-              </span>
-            </span>
-          </a>
-        </li>
-      ))
+      summary.skus.map((s, i) => {
+        const img = skuImage(s.sku);
+        return (
+          <li data-sku={s.sku}>
+            <a class="card" href={href(s.sku)}>
+              <div class="media">
+                {img ? (
+                  <img
+                    src={asset(img)}
+                    alt={`${s.name} GPU`}
+                    width={IMG_W}
+                    height={IMG_H}
+                    loading={i < 2 ? "eager" : "lazy"}
+                    decoding="async"
+                  />
+                ) : (
+                  <span class="tile" aria-hidden="true">{s.sku}</span>
+                )}
+              </div>
+              <div class="info">
+                <div class="line">
+                  <span class="name">{s.name}</span>
+                  <span class="price num">{usd(s.last.value)}</span>
+                </div>
+                <div class="line">
+                  <span class="unit muted">{s.unit}</span>
+                  <span class:list={["pill", "num", direction(s.change_24h)]} title="Change over the past 24 hours">
+                    {pct(s.change_24h?.pct)}
+                  </span>
+                </div>
+                <svg
+                  class:list={["spark", direction(s.change_24h)]}
+                  viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <path d={sparkPath(s.spark, SPARK_W, SPARK_H)} />
+                </svg>
+              </div>
+            </a>
+          </li>
+        );
+      })
     }
   </ul>
 </Base>
@@ -53,31 +77,43 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
   h1 { font-size: 32px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; }
   .intro p { margin: 0; }
 
-  .list { list-style: none; margin: 16px 0 0; padding: 0; border-top: 1px solid var(--line); }
-  .list li { border-bottom: 1px solid var(--line); }
-  .row {
+  .grid {
+    list-style: none;
+    margin: 24px 0 0;
+    padding: 0;
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-    gap: 24px;
-    padding: 16px 8px;
-    margin: 0 -8px;
-    text-decoration: none;
-    border-radius: 8px;
-    transition: background-color 120ms ease-out;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
-  .row:hover { background: var(--hover); }
-  .id { display: flex; flex-direction: column; min-width: 0; }
-  .name { font-weight: 600; font-size: 16px; }
+  .card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 120ms ease-out, transform 120ms ease-out;
+  }
+  .card:hover { border-color: var(--faint); transform: translateY(-2px); }
+
+  .media { aspect-ratio: 1200 / 630; background: var(--hover); }
+  .media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .tile {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--faint);
+  }
+
+  .info { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 12px; }
+  .line { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .name { font-weight: 600; font-size: 17px; }
+  .price { font-size: 17px; font-weight: 500; }
   .unit { font-size: 13px; }
-
-  .spark { display: block; overflow: visible; }
-  .spark path { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
-  .spark.up path { stroke: var(--up); }
-  .spark.down path { stroke: var(--down); }
-
-  .quote { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 88px; }
-  .price { font-size: 16px; font-weight: 500; }
   .pill {
     font-size: 13px;
     font-weight: 600;
@@ -89,9 +125,19 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
   .pill.up { background: var(--up); }
   .pill.down { background: var(--down); }
 
-  @media (max-width: 520px) {
-    .row { gap: 12px; }
-    .spark { width: 72px; }
+  .spark { display: block; width: 100%; height: 48px; margin-top: 8px; overflow: visible; }
+  .spark path {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .spark.up path { stroke: var(--up); }
+  .spark.down path { stroke: var(--down); }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
 
