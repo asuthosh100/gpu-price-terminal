@@ -1,6 +1,5 @@
 ---
 import Base from "../layouts/Base.astro";
-import Freshness from "../components/Freshness.astro";
 import { loadSummary } from "../lib/data";
 import { direction, pct, usd } from "../lib/format";
 import { sparkPath } from "../lib/sparkline";
@@ -9,13 +8,10 @@ const SPARK_W = 112;
 const SPARK_H = 36;
 
 const summary = loadSummary();
-const latest = Math.max(...summary.skus.map((s) => s.last.time));
 const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${sku.toLowerCase()}`;
 ---
 
 <Base title="GPU Index" description="Live GPU rental prices from the Computable GPU Index.">
-  <Freshness slot="status" time={latest} />
-
   <section class="intro">
     <h1>GPU prices</h1>
     <p class="muted">What it costs to rent one GPU for an hour, published every 15 minutes.</p>
@@ -100,7 +96,6 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
 </style>
 
 <script>
-  import { bindFreshness } from "../lib/freshness";
   import { direction, pct, usd } from "../lib/format";
   import { poll, withBase } from "../lib/live";
   import { sparkPath } from "../lib/sparkline";
@@ -110,7 +105,8 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
   const list = document.getElementById("list")!;
   const w = Number(list.dataset["sparkW"]);
   const h = Number(list.dataset["sparkH"]);
-  const badge = bindFreshness(document.getElementById("fresh")!);
+  // A failed poll keeps the last good data on screen; the next poll retries.
+  const keepLastGood = (): void => {};
 
   const setDirection = (el: Element | null, dir: string): void => {
     el?.classList.remove("up", "down");
@@ -130,8 +126,7 @@ const href = (sku: string) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${
       setDirection(spark, dir);
       spark?.querySelector("path")?.setAttribute("d", sparkPath(s.spark, w, h));
     }
-    badge.setTime(Math.max(...summary.skus.map((s) => s.last.time)));
   }
 
-  poll({ url: withBase("data/summary.json"), parse: parseSummary, onData: update, onError: badge.setError });
+  poll({ url: withBase("data/summary.json"), parse: parseSummary, onData: update, onError: keepLastGood });
 </script>

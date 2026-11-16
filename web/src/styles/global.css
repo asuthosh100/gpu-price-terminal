@@ -7,7 +7,6 @@
   --hover: #f5f6f7;
   --up: #00a805;
   --down: #ff5000;
-  --late: #c98a00;
   --on-pill: #ffffff;
   --c: var(--up);
   color-scheme: light;
@@ -22,7 +21,6 @@
     --hover: #0f1011;
     --up: #00c805;
     --down: #ff5000;
-    --late: #f0b400;
     --on-pill: #000000;
     color-scheme: dark;
   }
@@ -36,7 +34,6 @@
   --hover: #0f1011;
   --up: #00c805;
   --down: #ff5000;
-  --late: #f0b400;
   --on-pill: #000000;
   color-scheme: dark;
 }
@@ -66,18 +63,6 @@ h2 {
   border-bottom: 1px solid var(--line);
 }
 
-/* "Updated 6 min ago" with a status dot */
-.fresh { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
-.fresh::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--up);
-}
-.fresh[data-state="late"]::before { background: var(--late); }
-.fresh[data-state="stale"]::before { background: var(--down); }
-.fresh[data-state="error"]::before { background: var(--down); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

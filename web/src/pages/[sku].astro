@@ -1,6 +1,5 @@
 ---
 import Base from "../layouts/Base.astro";
-import Freshness from "../components/Freshness.astro";
 import { loadDetail, loadSummary } from "../lib/data";
 import { TZ_LABEL, changeText, direction, pct, shortTime, usd } from "../lib/format";
 import { DAY, DEFAULT_RANGE, availableRanges, changeOver, findRange, rangePoints, stats } from "../lib/metrics";
@@ -34,11 +33,9 @@ const statRows = [
 ---
 
 <Base title={`${detail.name} · GPU Index`} description={`${detail.name} rental price per GPU-hour, live.`}>
-  <Freshness slot="status" time={detail.last.time} />
-
   <div id="page" data-sku={sku} data-range={range.key}>
     <a class="back muted" href={import.meta.env.BASE_URL}>← All GPUs</a>
-    <div class="sym"><b>{detail.name}</b> · {detail.unit} · CGI composite</div>
+    <div class="sym"><b>{detail.name}</b> · {detail.unit}</div>
     <div id="price" class="price num">{usd(detail.last.value)}</div>
     <div id="change" class="change num">
       <span class:list={[direction(headChange)]}>{changeText(headChange)}</span>
@@ -182,7 +179,6 @@ const statRows = [
 <script>
   import { PriceChart } from "../lib/chart";
   import type { ScrubState } from "../lib/chart";
-  import { bindFreshness } from "../lib/freshness";
   import { TZ_LABEL, changeText, direction, pct, stampFor, usd } from "../lib/format";
   import { poll, withBase } from "../lib/live";
   import { DAY, availableRanges, changeOver, findRange, stats } from "../lib/metrics";
@@ -193,7 +189,8 @@ const statRows = [
   const page = document.getElementById("page")!;
   const sku = page.dataset["sku"]!;
   const $ = (id: string): HTMLElement => document.getElementById(id)!;
-  const badge = bindFreshness($("fresh"));
+  // A failed poll keeps the last good data on screen; the next poll retries.
+  const keepLastGood = (): void => {};
   const rangesEl = $("ranges");
 
   let ranges: readonly Range[] = [];
@@ -252,7 +249,6 @@ const statRows = [
     }
     chart.setData(d.points, d.versions);
     paintStats(d);
-    badge.setTime(d.last.time);
   }
 
   rangesEl.addEventListener("click", (e) => {
@@ -266,6 +262,6 @@ const statRows = [
     url: withBase(`data/${sku.toLowerCase()}.json`),
     parse: (doc) => parseDetail(doc, sku),
     onData: update,
-    onError: badge.setError,
+    onError: keepLastGood,
   });
 </script>

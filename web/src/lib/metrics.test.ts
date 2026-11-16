@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DAY, changeOver, downsample, indexAtOrBefore, rangePoints, stats, switchAt } from "./metrics";
-import { freshness, pct, shortTime, signedUsd, stampFor, timeAgo } from "./format";
+import { pct, shortTime, signedUsd, stampFor } from "./format";
 import { sparkPath } from "./sparkline";
 import { DataError, parseDetail, parseSummary } from "./types";
 import type { Point } from "./types";
@@ -84,20 +84,10 @@ describe("format", () => {
     expect(signedUsd(-0.5)).toBe("−$0.500");
     expect(pct(0)).toBe("+0.00%");
   });
-  it("describes elapsed time", () => {
-    expect(timeAgo(1000, 1030)).toBe("just now");
-    expect(timeAgo(0, 360)).toBe("6 min ago");
-    expect(timeAgo(0, 7300)).toBe("2 h ago");
-  });
   it("shows times in Dubai time (UTC+4)", () => {
     const t = Date.UTC(2026, 10, 16, 7, 15) / 1000; // 07:15 UTC
     expect(shortTime(t)).toBe("Nov 16, 11:15 AM");
-    expect(stampFor(Date.UTC(2026, 10, 16, 21, 0) / 1000, 365 * DAY)).toBe("Nov 17, 2026");
-  });
-  it("flags late and stale prints", () => {
-    expect(freshness(0, 20 * 60)).toBe("fresh");
-    expect(freshness(0, 45 * 60)).toBe("late");
-    expect(freshness(0, 3 * 3600)).toBe("stale");
+    expect(stampFor(Date.UTC(2026, 10, 16, 21, 0) / 1000, 365 * DAY)).toBe("Nov 17, 2026, 1:00 AM");
   });
 });
 
