@@ -1,6 +1,5 @@
 ---
 import "../styles/global.css";
-import { TZ_LABEL } from "../lib/format";
 
 interface Props {
   readonly title: string;
@@ -27,10 +26,6 @@ const home = import.meta.env.BASE_URL;
     <main class="wrap">
       <slot />
     </main>
-    <footer class="wrap credit">
-      Data: <a href="https://github.com/getcomputable/gpu-index">Computable GPU Index</a>, CC BY-NC 4.0 ·
-      all times Dubai ({TZ_LABEL}, UTC+4)
-    </footer>
   </body>
 </html>
 
@@ -38,5 +33,4 @@ const home = import.meta.env.BASE_URL;
   .top { border-bottom: 1px solid var(--line); }
   .bar { display: flex; align-items: center; justify-content: space-between; height: 56px; padding-bottom: 0; }
   .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; text-decoration: none; }
-  .credit { color: var(--muted); font-size: 12px; padding-top: 0; }
 </style>

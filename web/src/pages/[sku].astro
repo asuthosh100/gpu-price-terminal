@@ -80,6 +80,9 @@ const statRows = [
       }
     </div>
     <p class="asof muted">Last print {shortTime(detail.last.time)} {TZ_LABEL}</p>
+    <p class="credit muted">
+      Data: <a href="https://github.com/getcomputable/gpu-index">Computable GPU Index</a>, CC BY-NC 4.0
+    </p>
   </div>
 </Base>
 
@@ -167,7 +170,8 @@ const statRows = [
   .stat { padding: 14px 0; border-bottom: 1px solid var(--line); }
   .k { font-size: 13px; color: var(--muted); }
   .v { font-size: 15px; margin-top: 2px; }
-  .asof { font-size: 12px; margin: 16px 0 24px; }
+  .asof { font-size: 12px; margin: 16px 0 4px; }
+  .credit { font-size: 12px; margin: 0 0 24px; }
 
   @media (max-width: 640px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
