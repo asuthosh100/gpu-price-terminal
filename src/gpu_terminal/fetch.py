@@ -16,7 +16,7 @@ from gpu_terminal.prints import Print, parse_observation
 PUBLIC_BASE_URL = "https://data.getcomputable.com"
 SKUS = ("H100", "H200", "B200", "B300")
 # SKUs polled and shown on the site, in display order. Add one here to take it live.
-LIVE_SKUS = ("H100", "H200")
+LIVE_SKUS = ("H100", "H200", "B200", "B300")
 SERIES_RANGES = ("24h", "7d", "30d", "90d")
 
 
