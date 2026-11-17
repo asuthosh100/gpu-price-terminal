@@ -7,6 +7,7 @@ const ROOT = document.getElementById('anatomy');
 if (!ROOT) return;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const COMPACT_W = 300; // px: a view narrower than this shows one step's labels at a time
+const COMPACT_ZOOM = 0.92; // and frames the model tighter (<1 = closer), since phones have less room to spare
 const LIVE = (d => ({ name: d.name || 'B200', unit: d.unit || 'USD per GPU-hour', price: d.price || '', pct: d.pct || '', dir: d.dir || '', href: d.href || '#' }))(document.getElementById('scrolly').dataset);
 /* ---------- drawing kit ---------- */
 const f1 = n => Number(n).toFixed(1);
@@ -452,7 +453,7 @@ function makeView(canvas, labelBox, cfg) {
     v.fans.forEach(f => { f.rotation.y += dt * 2.4 * (1 - 0.85 * e(3)); });
     v.spin.rotation.y = cfg.rotY + (p / 11 - 0.5) * cfg.turn + drag;
     const k1 = e(1), k3 = e(3), vh = lerp(lerp(cfg.h[0], cfg.h[1], k1), cfg.h[2], k3), vw = lerp(lerp(cfg.w[0], cfg.w[1], k1), cfg.w[2], k3);
-    const vis = Math.max(vh, vw / cam.aspect), dist = vis / 2 / Math.tan(cam.fov * Math.PI / 360);
+    const vis = Math.max(vh, vw / cam.aspect) * (W < COMPACT_W ? COMPACT_ZOOM : 1), dist = vis / 2 / Math.tan(cam.fov * Math.PI / 360);
     cam.position.set(0, dist * Math.sin(cfg.elev), dist * Math.cos(cfg.elev)); cam.lookAt(0, 0, 0);
     scene.updateMatrixWorld(); cam.updateMatrixWorld();
     v.labels.forEach(l => {
