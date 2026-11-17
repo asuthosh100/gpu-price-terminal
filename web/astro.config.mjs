@@ -7,4 +7,6 @@ export default defineConfig({
   base: process.env.SITE_BASE || "/",
   trailingSlash: "ignore",
   build: { format: "directory" },
+  // Fetch a page as soon as a link is hovered or tapped, so navigating feels instant.
+  prefetch: { prefetchAll: true, defaultStrategy: "hover" },
 });

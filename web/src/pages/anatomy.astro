@@ -44,7 +44,7 @@ const asset = (path: string) => `${base}/${path}`;
       data-price={usd(featured?.last.value)}
       data-pct={pct(featured?.change_24h?.pct)}
       data-dir={direction(featured?.change_24h)}
-      data-href={featured ? asset(featured.sku.toLowerCase()) : base || "/"}
+      data-href={featured ? asset(`${featured.sku.toLowerCase()}/`) : base || "/"}
     >
       <div class="sticky wide">
         <div class="obj oil">

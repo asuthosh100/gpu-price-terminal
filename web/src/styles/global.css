@@ -70,3 +70,17 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Page-to-page transitions: the browser cross-fades between pages (the new one rises in
+   slightly) while the header stays put. Browsers without cross-document view transitions
+   simply navigate as before. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: 160ms ease-in both page-out; }
+::view-transition-new(root) { animation: 280ms cubic-bezier(0.2, 0.7, 0.2, 1) both page-in; }
+::view-transition-group(site-header) { animation-duration: 0s; }
+@keyframes page-out { to { opacity: 0; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
+

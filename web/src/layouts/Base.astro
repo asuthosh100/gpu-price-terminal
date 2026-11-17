@@ -10,9 +10,9 @@ interface Props {
 const { title, description, wide = false } = Astro.props;
 const home = import.meta.env.BASE_URL;
 const base = home.replace(/\/$/, "");
-const anatomy = `${base}/anatomy`;
+const anatomy = `${base}/anatomy/`;
 // Prices (home and every GPU page) vs the explainer: highlights the current section in the header.
-const onAnatomy = Astro.url.pathname.replace(/\/$/, "") === anatomy;
+const onAnatomy = Astro.url.pathname.replace(/\/?$/, "/") === anatomy;
 const links = [
   { href: home, label: "USD / GPU-hour", current: !onAnatomy },
   { href: anatomy, label: "What is a GPU-hour?", current: onAnatomy },
@@ -51,7 +51,7 @@ const links = [
 </html>
 
 <style>
-  .top { border-bottom: 1px solid var(--line); }
+  .top { border-bottom: 1px solid var(--line); view-transition-name: site-header; }
   .bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 76px; padding-bottom: 0; }
   .brand { font-weight: 800; font-size: 30px; letter-spacing: -0.04em; line-height: 1; text-decoration: none; }
   .nav { display: flex; align-items: center; gap: 6px; }

@@ -13,7 +13,7 @@ const IMG_H = 462;
 
 const summary = loadSummary();
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-const href = (sku: string) => `${base}/${sku.toLowerCase()}`;
+const href = (sku: string) => `${base}/${sku.toLowerCase()}/`;
 const asset = (path: string) => `${base}/${path}`;
 ---
 
