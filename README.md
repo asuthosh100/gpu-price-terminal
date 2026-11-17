@@ -1,10 +1,4 @@
-# LoadStore
 
-Live GPU rental prices, per GPU-hour: **https://loadstore.xyz**
-
-Tracks H100, H200, B200 and B300 rental prices from the Computable GPU Index,
-updated every 15 minutes, with price history charts and an explainer,
-[Anatomy of a GPU-hour](https://loadstore.xyz/anatomy/).
 
 ## License
 
