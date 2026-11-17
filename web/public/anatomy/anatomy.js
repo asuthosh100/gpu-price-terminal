@@ -6,6 +6,7 @@
 const ROOT = document.getElementById('anatomy');
 if (!ROOT) return;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const COMPACT_W = 300; // px: a view narrower than this shows one step's labels at a time
 const LIVE = (d => ({ name: d.name || 'B200', unit: d.unit || 'USD per GPU-hour', price: d.price || '', pct: d.pct || '', dir: d.dir || '', href: d.href || '#' }))(document.getElementById('scrolly').dataset);
 /* ---------- drawing kit ---------- */
 const f1 = n => Number(n).toFixed(1);
@@ -456,6 +457,8 @@ function makeView(canvas, labelBox, cfg) {
     scene.updateMatrixWorld(); cam.updateMatrixWorld();
     v.labels.forEach(l => {
       let o = l.solid ? Math.min(1, l.pc.o / 0.38) : l.pc.o; if (l.show !== undefined) o *= e(l.show); if (l.hide !== undefined) o *= 1 - e(l.hide);
+      // Small views (phones) have no room for every label at once: show only the current step's.
+      if (W < COMPACT_W && (l.show ?? l.pc.def.step ?? 0) !== now) o = 0;
       if (o < 0.02) { l.el.style.visibility = 'hidden'; return; }
       tmp.copy(l.pos); l.pc.g.localToWorld(tmp); tmp.project(cam);
       l.el.style.visibility = 'visible'; l.el.style.opacity = o.toFixed(2);
