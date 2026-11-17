@@ -1,0 +1,30 @@
+Copyright (c) 2026 asuthosh100. All rights reserved.
+
+This repository and everything in it (source code, scripts, workflows, site
+design, text, images and other content), except the third-party material listed
+below, is proprietary.
+
+No license is granted. You may not copy, modify, merge, publish, distribute,
+sublicense, sell, host, deploy, or create derivative works from any part of this
+repository, in whole or in part, by any means, without prior written permission
+from the copyright holder.
+
+Viewing this repository on GitHub, and the forking that GitHub's Terms of Service
+allow within GitHub itself, do not grant any right to use, copy or redistribute
+its contents beyond what those Terms require.
+
+THIRD-PARTY MATERIAL (not covered by the above; governed by its own license)
+
+- GPU price index data: Computable GPU Index (CGI), (c) 2026 Computable,
+  https://github.com/getcomputable/gpu-index, licensed under CC BY-NC 4.0
+  (https://creativecommons.org/licenses/by-nc/4.0/). The index values shown on
+  the site and stored on the `data` branch are reproduced as published.
+- three.js (web/public/anatomy/), (c) 2010-2021 three.js authors, MIT License;
+  see web/public/anatomy/THREE-LICENSE.txt.
+- NVIDIA product names and images are trademarks or property of NVIDIA
+  Corporation, used for identification only.
+
+THE CONTENTS OF THIS REPOSITORY ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED.
+
+For permission requests, contact the copyright holder via GitHub.
