@@ -4,9 +4,12 @@ import "../styles/global.css";
 interface Props {
   readonly title: string;
   readonly description: string;
+  /** Full-width page: the page lays out its own `.wrap` sections instead of sitting inside one. */
+  readonly wide?: boolean;
 }
-const { title, description } = Astro.props;
+const { title, description, wide = false } = Astro.props;
 const home = import.meta.env.BASE_URL;
+const anatomy = `${home.replace(/\/$/, "")}/anatomy`;
 ---
 
 <!doctype html>
@@ -16,14 +19,21 @@ const home = import.meta.env.BASE_URL;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&display=swap"
+    />
   </head>
   <body>
     <header class="top">
       <div class="wrap bar">
         <a class="brand" href={home}>DKW</a>
+        <a class="nav muted" href={anatomy}>What is a GPU-hour?</a>
       </div>
     </header>
-    <main class="wrap">
+    <main class={wide ? undefined : "wrap"}>
       <slot />
     </main>
   </body>
@@ -33,4 +43,6 @@ const home = import.meta.env.BASE_URL;
   .top { border-bottom: 1px solid var(--line); }
   .bar { display: flex; align-items: center; justify-content: space-between; height: 56px; padding-bottom: 0; }
   .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.01em; text-decoration: none; }
+  .nav { font-size: 13px; text-decoration: none; }
+  .nav:hover { color: var(--text); }
 </style>
