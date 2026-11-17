@@ -1,0 +1,245 @@
+---
+// "Anatomy of a GPU-hour": a scroll explainer that takes a barrel of oil and a GPU apart side by side.
+// Markup, styles and the live price row live here; the scroll and 3D logic is public/anatomy/anatomy.js.
+import Base from "../layouts/Base.astro";
+import { loadSummary } from "../lib/data";
+import { direction, pct, usd } from "../lib/format";
+
+// The benchmark step shows one live index value. Prefer the B200, else the first GPU published.
+const FEATURED_SKU = "B200";
+const summary = loadSummary();
+const featured = summary.skus.find((s) => s.sku === FEATURED_SKU) ?? summary.skus[0];
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const asset = (path: string) => `${base}/${path}`;
+---
+
+<Base
+  title="Anatomy of a GPU-hour · DKW"
+  description="A barrel of oil and a GPU-hour, taken apart piece by piece: what is the same, what is different, and what compute is still missing."
+  wide
+>
+  <div class="anatomy" id="anatomy">
+    <div class="wrap">
+      <section class="intro">
+        <h1>Anatomy of a GPU-hour</h1>
+        <p class="muted">
+          AI runs on rented chips. One chip, rented for one hour, is a GPU-hour. It trades a lot like a barrel of oil,
+          with a few big differences. Scroll, and both come apart piece by piece.
+        </p>
+        <ul class="legend" aria-label="What the tags mean">
+          <li><span class="tag same">Same as oil</span> works the same way</li>
+          <li><span class="tag diff">Different from oil</span> where the comparison breaks</li>
+          <li><span class="tag missing">Missing today</span> oil has it, compute does not yet</li>
+        </ul>
+        <p class="hint">Scroll, or step with the ← and → keys. Drag either object to turn it.</p>
+      </section>
+    </div>
+
+    <section
+      class="scrolly"
+      id="scrolly"
+      data-sku={featured?.sku ?? ""}
+      data-name={featured?.name ?? ""}
+      data-unit={featured?.unit ?? ""}
+      data-price={usd(featured?.last.value)}
+      data-pct={pct(featured?.change_24h?.pct)}
+      data-dir={direction(featured?.change_24h)}
+      data-href={featured ? asset(featured.sku.toLowerCase()) : base || "/"}
+    >
+      <div class="sticky wide">
+        <div class="obj oil">
+          <h3><span class="t">Oil</span><span class="s">One barrel of crude</span></h3>
+          <div class="view">
+            <canvas id="cOil" role="img" aria-label="A steel oil barrel that comes apart as you scroll"></canvas>
+            <svg id="svgOil" viewBox="0 0 300 620" role="img" aria-label="A barrel of oil that comes apart as you scroll"></svg>
+            <div class="labels" id="lOil"></div>
+          </div>
+        </div>
+        <div class="obj gpu">
+          <h3><span class="t">Compute</span><span class="s">One GPU for one hour</span></h3>
+          <div class="view">
+            <canvas id="cGpu" role="img" aria-label="A graphics card that comes apart as you scroll"></canvas>
+            <svg id="svgGpu" viewBox="0 0 300 620" role="img" aria-label="A GPU that comes apart as you scroll"></svg>
+            <div class="labels" id="lGpu"></div>
+          </div>
+        </div>
+        <div class="cards">
+          <nav class="prog" id="prog" aria-label="Progress through the pieces"></nav>
+          <div class="deck" id="deck"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <footer>
+        <p>
+          Price shares are illustrative, from Kalshi Research, “Compute, Power and the Rise of AI Infrastructure
+          Markets”, October 2026. GPU debt figure from public financing trackers, October 2026.
+        </p>
+        <p>Nothing here is investment advice.</p>
+      </footer>
+    </div>
+  </div>
+
+  <script is:inline src={asset("anatomy/three.min.js")}></script>
+  <script is:inline src={asset("anatomy/anatomy.js")}></script>
+</Base>
+
+<style is:global>
+  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..800&display=swap");
+
+  /* Everything is scoped under .anatomy; the page's cards and labels are created by anatomy.js. */
+  .anatomy { font-family: "OpenAI Sans", "DM Sans", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+  .anatomy .wrap { padding-bottom: 0; }
+  .anatomy h2 { border: 0; padding: 0; }
+  .anatomy a.live { text-decoration: none; }
+  .anatomy a.live:hover { border-color: var(--faint); }
+  .anatomy .pill:not(.up):not(.down) { background: var(--muted); }
+  .anatomy .pill.down { background: var(--down); }
+  .anatomy .wide { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
+  .anatomy .intro { padding: 32px 0 16px; }
+  .anatomy h1 { font-size: 32px; font-weight: 500; letter-spacing: -0.02em; margin: 0 0 4px; text-wrap: balance; }
+  .anatomy .intro p { margin: 0; max-width: 62ch; }
+  .anatomy .legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 16px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+  .anatomy .legend li { display: flex; gap: 8px; align-items: center; }
+  .anatomy .intro .hint { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+  .anatomy .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 6px; color: var(--on-pill); background: var(--muted); white-space: nowrap; }
+  .anatomy .tag.diff { background: var(--down); }
+  .anatomy .tag.missing { background: var(--up); }
+  .anatomy .scrolly { position: relative; border-top: 1px solid var(--line); }
+  .anatomy .anchor { position: absolute; left: 0; width: 1px; height: 1px; }
+  .anatomy .sticky { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 44% 56%; gap: 0 8px; padding: 8px 0; }
+  .anatomy .obj { min-height: 0; display: flex; flex-direction: column; align-items: center; }
+  .anatomy .obj h3 { margin: 0 0 6px; width: 100%; display: flex; align-items: baseline; justify-content: center; gap: 10px; line-height: 1.1; }
+  .anatomy .obj h3 .t { font-size: 20px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
+  .anatomy .obj h3 .s { font-size: 11px; color: var(--muted); text-align: right; }
+  .anatomy .view { position: relative; flex: 1; min-height: 0; width: 100%; }
+  .anatomy .view canvas, .anatomy .view svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .anatomy .view canvas { display: none; }
+  .anatomy.gl .view canvas { display: block; touch-action: pan-y; cursor: grab; }
+  .anatomy.gl .view canvas:active { cursor: grabbing; }
+  .anatomy.gl .view svg { display: none; }
+  .anatomy.gl .view { background: radial-gradient(120% 70% at 50% 100%, #1d2026 0%, #0a0b0d 55%, #000000 100%); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .anatomy .labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .anatomy .chip { position: absolute; left: 0; top: 0; font-size: 11px; font-weight: 600; line-height: 1.3; padding: 1px 6px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); color: var(--text); white-space: nowrap; visibility: hidden; }
+  .anatomy .chip.d { background: var(--down); border-color: var(--down); color: var(--on-pill); }
+  .anatomy .cards { grid-column: 1 / -1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+  .anatomy .prog { flex: none; display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+  .anatomy .prog a { display: block; padding: 5px 0; }
+  .anatomy .prog a::before { content: ""; display: block; height: 4px; border-radius: 2px; background: var(--line); }
+  .anatomy .prog a.on::before { background: var(--muted); opacity: .45; }
+  .anatomy .prog a.on.diff::before { background: var(--down); }
+  .anatomy .prog a.on.missing::before { background: var(--up); }
+  .anatomy .prog a.cur::before { opacity: 1; }
+  .anatomy .deck { position: relative; flex: 1; min-height: 0; }
+  .anatomy .card { position: absolute; inset: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 14px 16px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms; }
+  .anatomy .card.on { opacity: 1; visibility: visible; transform: none; }
+  .anatomy .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 8px; }
+  .anatomy .count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .anatomy .count b { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .anatomy h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; margin: 0 0 10px; text-wrap: balance; }
+  .anatomy .vs { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .anatomy .side { padding: 10px 10px 10px 0; min-width: 0; }
+  .anatomy .side + .side { padding: 10px 0 10px 10px; border-left: 1px solid var(--line); }
+  .anatomy .who { margin: 0 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .anatomy .key { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; text-wrap: balance; }
+  .anatomy .txt { margin: 0; font-size: 13px; line-height: 1.4; }
+  .anatomy .txt b { font-weight: 600; }
+  .anatomy .sowhat { margin-top: auto; padding: 10px 12px; border-radius: 12px; background: var(--hover); border-left: 3px solid var(--up); font-size: 14px; font-weight: 500; line-height: 1.35; }
+  .anatomy .vs + .sowhat, .anatomy .src + .sowhat, .anatomy .jump + .sowhat { margin-top: auto; }
+  .anatomy .card > .vs, .anatomy .card > .live, .anatomy .card > .jump { margin-bottom: 10px; }
+  .anatomy .lab { display: block; margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .anatomy .live { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .anatomy .live .name { font-weight: 600; }
+  .anatomy .live .unit { font-size: 13px; color: var(--muted); }
+  .anatomy .live .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .anatomy .pill { font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 6px; color: var(--on-pill); background: var(--up); font-variant-numeric: tabular-nums; }
+  .anatomy .src { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  .anatomy .sowhat + .src { margin: 8px 0 0; }
+  .anatomy .term { font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px dashed var(--muted); padding: 0; cursor: help; }
+  .anatomy .def { display: block; margin: 6px 0 0; padding: 6px 10px; background: var(--hover); border-radius: 8px; font-size: 13px; color: var(--muted); }
+  .anatomy .def[hidden] { display: none; }
+  .anatomy .filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+  .anatomy .filters button { font: inherit; font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+  .anatomy .filters button:hover { background: var(--hover); }
+  .anatomy .filters button[aria-pressed="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .anatomy .jump { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; margin: 0; padding: 0; list-style: none; font-size: 13px; border-top: 1px solid var(--line); }
+  .anatomy .jump li { border-bottom: 1px solid var(--line); }
+  .anatomy .jump li[hidden] { display: none; }
+  .anatomy .jump a { display: flex; align-items: center; gap: 8px; padding: 6px 0; text-decoration: none; }
+  .anatomy .jump a:hover { color: var(--muted); }
+  .anatomy .jump .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .anatomy .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .anatomy .dot.diff { background: var(--down); }
+  .anatomy .dot.missing { background: var(--up); }
+  .anatomy .ink * { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .anatomy .ink .wo, .anatomy .ink .wg { fill: var(--hover); }
+  .anatomy .ink .ws { fill: var(--bg); }
+  .anatomy .ink .crude { fill: var(--faint); }
+  .anatomy .ink .hl, .anatomy .ink .ho { stroke: var(--up); stroke-width: 2; }
+  .anatomy .ink .down { stroke: var(--down); stroke-width: 2; }
+  .anatomy .ink text { stroke: none; fill: var(--text); font-family: inherit; font-size: 15px; font-weight: 600; }
+  .anatomy .ink text.sm { font-size: 14px; font-weight: 500; }
+  .anatomy .ink text.d { fill: var(--down); }
+  .anatomy .piece.active > *:not(text) { stroke: var(--up); stroke-width: 2.2; }
+  .anatomy .piece.gone > *:not(text) { stroke-dasharray: 4 5; }
+  .anatomy footer { padding: 24px 0 56px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+  .anatomy footer p { margin: 0 0 4px; max-width: 70ch; }
+  .anatomy .rail { display: none; }
+  @media (min-width: 900px) {
+    .anatomy .sticky { grid-template-columns: minmax(0, 1fr) minmax(400px, 520px) minmax(0, 1fr); grid-template-rows: 100%; gap: 0 28px; padding: 16px 0; }
+    .anatomy .obj { height: 100%; }
+    .anatomy .obj h3 { margin-bottom: 10px; height: 36px; }
+    .anatomy .obj h3 .t { font-size: 34px; }
+    .anatomy .obj h3 .s { font-size: 13px; }
+    .anatomy .obj.oil { grid-column: 1; grid-row: 1; }
+    .anatomy .cards { grid-column: 2; grid-row: 1; height: 100%; padding-top: 22px; gap: 10px; }
+    .anatomy .prog { height: 14px; }
+    .anatomy .obj.gpu { grid-column: 3; grid-row: 1; }
+    .anatomy .chip { font-size: 12px; }
+    .anatomy .card { padding: clamp(22px, 3.2vh, 36px) 32px; }
+    .anatomy .card-top { margin-bottom: clamp(14px, 3vh, 28px); }
+    .anatomy .count b { font-size: 30px; }
+    .anatomy h2 { font-size: clamp(34px, 3.1vw, 46px); margin-bottom: clamp(16px, 3vh, 28px); }
+    .anatomy .side { padding: 20px 20px 20px 0; }
+    .anatomy .side + .side { padding: 20px 0 20px 20px; }
+    .anatomy .who { font-size: 12px; margin-bottom: 10px; }
+    .anatomy .key { font-size: 22px; margin-bottom: 10px; }
+    .anatomy .txt { font-size: 15px; line-height: 1.5; }
+    .anatomy .card > .vs, .anatomy .card > .live, .anatomy .card > .jump { margin-bottom: 16px; }
+    .anatomy .sowhat { padding: 16px 20px; font-size: 18px; }
+    .anatomy .lab { font-size: 12px; margin-bottom: 6px; }
+    .anatomy .src { font-size: 13px; }
+    .anatomy .jump { font-size: 14px; }
+    .anatomy .jump a { padding: 9px 0; }
+    .anatomy .filters { margin-bottom: 16px; }
+  }
+</style>
+
+<script>
+  import { direction, pct, usd } from "../lib/format";
+  import { poll, withBase } from "../lib/live";
+  import { parseSummary } from "../lib/types";
+  import type { Summary } from "../lib/types";
+
+  // Keep the benchmark step's price row in step with the index, like the home page does.
+  const sku = document.getElementById("scrolly")?.dataset["sku"] ?? "";
+  // A failed poll keeps the last good value on screen; the next poll retries.
+  const keepLastGood = (): void => {};
+
+  function update(summary: Summary): void {
+    const row = summary.skus.find((s) => s.sku === sku);
+    if (!row) return;
+    const price = document.getElementById("live-price");
+    if (price) price.textContent = usd(row.last.value);
+    const pill = document.getElementById("live-pill");
+    if (pill) {
+      pill.textContent = pct(row.change_24h?.pct);
+      pill.classList.remove("up", "down");
+      const dir = direction(row.change_24h);
+      if (dir) pill.classList.add(dir);
+    }
+  }
+
+  if (sku) poll({ url: withBase("data/summary.json"), parse: parseSummary, onData: update, onError: keepLastGood });
+</script>
