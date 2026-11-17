@@ -2,6 +2,7 @@
 // scrub to inspect, the line after the cursor dims, a pulse on the latest print.
 
 import { changeBetween, downsample, rangePoints, switchAt } from "./metrics";
+import { THEME_EVENT } from "./theme";
 import type { Range } from "./metrics";
 import type { Change, Point, Version } from "./types";
 
@@ -60,6 +61,7 @@ export class PriceChart {
     this.bindPointer();
     new ResizeObserver(() => this.relayout()).observe(el.box);
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => this.draw());
+    document.addEventListener(THEME_EVENT, () => this.draw());
   }
 
   /** Replace the data. Animates only on first load; live updates redraw in place. */

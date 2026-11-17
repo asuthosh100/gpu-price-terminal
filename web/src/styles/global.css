@@ -39,6 +39,14 @@
 }
 
 * { box-sizing: border-box; }
+/* Header theme toggle: show the moon on light pages and the sun on dark ones. */
+.theme .sun { display: none; }
+:root[data-theme="dark"] .theme .sun { display: block; }
+:root[data-theme="dark"] .theme .moon { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme .sun { display: block; }
+  :root:not([data-theme="light"]) .theme .moon { display: none; }
+}
 /* One typeface everywhere: DM Sans (loaded in layouts/Base.astro), system font while it loads. */
 :root { --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 body {
