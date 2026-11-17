@@ -238,7 +238,7 @@ function textTex(draw, w, h) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return t;
 }
-const FONT = '"OpenAI Sans", "DM Sans", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Arial, sans-serif';
+const FONT = '"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 function words(text, o = {}) {
   return (x, w, h) => {
     x.fillStyle = o.bg || '#ffffff'; x.fillRect(0, 0, w, h);
