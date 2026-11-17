@@ -4,9 +4,9 @@
 
 export type Theme = "light" | "dark";
 
-export const THEME_KEY = "dkw-theme";
+export const THEME_KEY = "loadstore-theme";
 /** Fired on document after the theme changes, so canvas drawings can repaint. */
-export const THEME_EVENT = "dkw:themechange";
+export const THEME_EVENT = "loadstore:themechange";
 
 const isTheme = (v: unknown): v is Theme => v === "light" || v === "dark";
 

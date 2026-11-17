@@ -29,7 +29,7 @@ const links = [
     <script is:inline>
       // Apply a saved light/dark choice before first paint (see src/lib/theme.ts).
       try {
-        const t = localStorage.getItem("dkw-theme");
+        const t = localStorage.getItem("loadstore-theme");
         if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
       } catch {}
     </script>
@@ -43,7 +43,7 @@ const links = [
   <body>
     <header class="top">
       <div class="wrap bar">
-        <a class="brand" href={home} aria-label="DKW home">DKW</a>
+        <a class="brand" href={home} aria-label="LoadStore home">LDSTR</a>
         <nav class="nav" aria-label="Site">
           {links.map((l) => (
             <a href={l.href} aria-current={l.current ? "page" : undefined}>{l.label}</a>
@@ -110,11 +110,12 @@ const links = [
   .theme:hover { background: var(--hover); }
   .theme svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
+  /* Phones: the brand sits on its own row and the links + theme button go underneath. */
   @media (max-width: 520px) {
-    .bar { height: 64px; gap: 8px; }
-    .brand { font-size: 24px; }
-    .nav { gap: 2px; }
-    .nav a { font-size: 13px; padding: 6px 8px; }
-    .theme { width: 32px; height: 32px; margin-left: 2px; }
+    .bar { height: auto; flex-wrap: wrap; row-gap: 6px; padding-top: 14px; padding-bottom: 10px; }
+    .brand { font-size: 26px; }
+    .nav { width: 100%; gap: 2px; margin-left: -10px; }
+    .nav a { font-size: 13px; padding: 6px 10px; }
+    .theme { width: 32px; height: 32px; margin-left: auto; }
   }
 </style>

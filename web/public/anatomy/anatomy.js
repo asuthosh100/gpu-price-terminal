@@ -117,7 +117,7 @@ const STEPS = [
   { id: 'the-benchmark', ko: 'Brent', kg: 'A GPU index', tag: 'missing', title: 'The benchmark',
     oil: 'Brent is a [[benchmark|One published price that everyone agrees to use as the reference in their contracts.]]. Contracts all over the world simply say “Brent, plus or minus”.',
     gpu: 'Compute needs the same: one trusted number per chip, per region, worked out from real prices by rules anyone can check.',
-    so: 'This is the piece DKW has built.', live: true },
+    so: 'This is the piece LoadStore has built.', live: true },
   { id: 'the-hedge', ko: 'Fuel swaps', kg: 'Compute swaps', tag: 'missing', title: 'The hedge',
     oil: 'An airline can fix next year’s fuel price today with a [[swap|A contract where one side pays a fixed price and the other pays whatever the benchmark turns out to be. They settle the difference in cash.]]. The producer on the other side fixes its income.',
     gpu: 'An AI company should be able to fix next year’s compute bill the same way, and the data-center owner its income.',
@@ -159,7 +159,7 @@ document.getElementById('deck').innerHTML = STEPS.map((s, i) => `
       <div class="side"><p class="who">Oil</p><p class="key">${s.ko}</p><p class="txt">${terms(s.oil)}</p></div>
       <div class="side"><p class="who">Compute</p><p class="key">${s.kg}</p><p class="txt">${terms(s.gpu)}</p></div>
     </div>
-    ${s.live ? `<a class="live" href="${esc(LIVE.href)}"><span><span class="name">${esc(LIVE.name)}</span> <span class="unit">${esc(LIVE.unit)}</span></span><span><span class="price" id="live-price">${esc(LIVE.price)}</span> <span class="pill ${esc(LIVE.dir)}" id="live-pill">${esc(LIVE.pct)}</span></span></a><p class="src">Live from the DKW index. Select it for the full chart.</p>` : ''}
+    ${s.live ? `<a class="live" href="${esc(LIVE.href)}"><span><span class="name">${esc(LIVE.name)}</span> <span class="unit">${esc(LIVE.unit)}</span></span><span><span class="price" id="live-price">${esc(LIVE.price)}</span> <span class="pill ${esc(LIVE.dir)}" id="live-pill">${esc(LIVE.pct)}</span></span></a><p class="src">Live from the LoadStore index. Select it for the full chart.</p>` : ''}
     <div class="sowhat"><span class="lab">Why it matters</span>${s.so}</div>
     ${s.src ? `<p class="src">${s.src}</p>` : ''}
   </article>`).join('') + `
@@ -367,8 +367,16 @@ function buildCard(v) {
   layer('lid', 0.6, g => {
     g.add(mesh(rbox(1.52, 0.06, 1.12, 0.07, 0.016), brushedMat(0xb9bdc4, 0.5)));
     [[-0.66, -0.46], [0.66, -0.46], [-0.66, 0.46], [0.66, 0.46]].forEach(([x, z]) => g.add(cyl(0.04, 0.03, MAT.black(), x, 0.035, z, 6)));
-    const mark = new THREE.MeshBasicMaterial({ map: textTex((x, w, h) => { x.clearRect(0, 0, w, h); x.fillStyle = '#17181b'; x.font = `800 ${Math.round(h * 0.62)}px ${FONT}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('DKW', w / 2, h / 2); }, 512, 200), alphaTest: 0.5 }); mark.userData.noGlow = true;
-    const d = mesh(new THREE.PlaneGeometry(0.62, 0.24), mark, 0, 0.0315, 0); d.rotation.x = -Math.PI / 2; g.add(d);
+    // Brand on the lid: the font shrinks until the name fits 90% of the label's width.
+    const mark = new THREE.MeshBasicMaterial({ map: textTex((x, w, h) => {
+      const name = 'LDSTR';
+      x.clearRect(0, 0, w, h); x.fillStyle = '#17181b'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      let px = Math.round(h * 0.62);
+      x.font = `800 ${px}px ${FONT}`;
+      while (px > 8 && x.measureText(name).width > w * 0.9) { px -= 2; x.font = `800 ${px}px ${FONT}`; }
+      x.fillText(name, w / 2, h / 2);
+    }, 1024, 236), alphaTest: 0.5 }); mark.userData.noGlow = true;
+    const d = mesh(new THREE.PlaneGeometry(1.04, 0.24), mark, 0, 0.0315, 0); d.rotation.x = -Math.PI / 2; g.add(d);
   }, 'scarcity 8%');
   v.add(v.spin, { step: 1, pos: [0.45, 0.04, 0.775], moves: [{ s: 1, x: -0.2, y: 1.2, z: 0.4 }, { s: 3, x: -1.9, y: 1.7 }], rots: [{ s: 1, y: 0.55 }], build: g => g.add(plate(0.6, 0.3, words('B200'))) });
   const clock = v.add(v.spin, { step: 4, pos: [0.98, Y.lid + 0.36, -0.5], moves: [{ s: 3, y: 2.15 }, { s: 4, x: 0.3, y: 0.3 }], rots: [{ s: 3, y: 0.55 }], fadeOut: { s: 4, to: 0.38 }, build: g => {
